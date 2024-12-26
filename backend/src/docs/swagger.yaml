@@ -1,0 +1,613 @@
+openapi: 3.0.0
+info:
+  title: Perfume Store API
+  version: 1.0.0
+  description: API documentation for the Perfume Store
+servers:
+  - url: http://localhost:5000/api
+    description: Development server
+
+paths:
+  /auth/login:
+    post:
+      tags:
+        - Auth
+      summary: Login user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        200:
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        401:
+          description: Invalid credentials
+
+  /auth/register:
+    post:
+      tags:
+        - Auth
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        201:
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        400:
+          description: Invalid input
+
+  /users/profile:
+    get:
+      tags:
+        - User
+      summary: Get user profile
+      security:
+        - BearerAuth: []
+      responses:
+        200:
+          description: User profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        401:
+          description: Unauthorized
+    put:
+      tags:
+        - User
+      summary: Update user /users/profile
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                firstName:
+                  type: string
+                  description: User's first name
+                lastName:
+                  type: string
+                  description: User's last name
+                phone:
+                  type: string
+                  pattern: '^\+?[1-9]\d{1,14}$'
+                  description: Phone number in international format
+            example:
+              firstName: 'John'
+              lastName: 'Doe'
+              phone: '+1234567890'
+      responses:
+        200:
+          description: User profile updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+              example:
+                id: '1'
+                email: 'john.doe@example.com'
+                username: 'john.doe'
+                firstName: 'John'
+                lastName: 'Doe'
+                phone: '+1234567890'
+                role: 'USER'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        500:
+          description: Error updating profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /address:
+    get:
+      tags:
+        - Address
+      summary: Get user addresses
+      security:
+        - BearerAuth: []
+      responses:
+        200:
+          description: Addresses retrieves successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Address'
+        500:
+          description: Error fetching addresses
+
+    post:
+      tags:
+        - Address
+      summary: Add a new address
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddressRequest'
+      responses:
+        201:
+          description: Address added successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Address'
+        400:
+          description: Invalid input
+        401:
+          description: Unauthorized
+
+  /address/{id}:
+    put:
+      tags:
+        - Address
+      summary: Update an address
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddressRequest'
+      responses:
+        200:
+          description: Address updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Address'
+        404:
+          description: Address not found
+        401:
+          description: Unauthorized
+
+    delete:
+      tags:
+        - Address
+      summary: Delete an address
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+          description: Address id\
+      responses:
+        204:
+          description: Address deleted successfully
+        404:
+          description: Address not found
+        401:
+          description: Unauthorized
+  /products:
+    get:
+      tags:
+        - Products
+      summary: Get all products
+      responses:
+        200:
+          description: List of products
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  products:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Product'
+  /products/filter:
+    get:
+      tags:
+        - Products
+      summary: Get all products
+      parameters:
+        - in: query
+          name: category
+          schema:
+            type: string
+          description: Filter products by category slug
+        - in: query
+          name: brand
+          schema:
+            type: string
+          description: Filter products by brand name
+        - in: query
+          name: minPrice
+          schema:
+            type: number
+          description: Minimum price filter
+        - in: query
+          name: maxPrice
+          schema:
+            type: number
+          description: Maximum price filter
+        - in: query
+          name: featured
+          schema:
+            type: boolean
+          description: Filter featured products
+        - in: query
+          name: bestseller
+          schema:
+            type: boolean
+          description: Filter bestseller products
+        - in: query
+          name: sort
+          schema:
+            type: string
+            enum: [price_asc, price_desc]
+          description: Sort products by price (ascending or descending)
+      responses:
+        200:
+          description: List of products
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  products:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Product'
+  /products/{slug}:
+    get:
+      tags:
+        - Products
+      summary: Get a product by slug
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema:
+            type: string
+          description: Product slug
+      responses:
+        200:
+          description: Product details retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        404:
+          description: Product not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        500:
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /categories:
+    get:
+      tags:
+        - Categories
+      summary: Get all categories
+      responses:
+        200:
+          description: List of categories
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  categories:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Category'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the user
+        email:
+          type: string
+          format: email
+          description: User's email address
+        username:
+          type: string
+          minLength: 3
+          maxLength: 30
+          description: User's chosen username
+        firstName:
+          type: string
+          description: User's first name
+        lastName:
+          type: string
+          description: User's last name
+        phone:
+          type: string
+          pattern: '^\+?[1-9]\d{1,14}$'
+          description: Phone number in international format
+        role:
+          type: string
+          enum: [USER, ADMIN]
+          description: User's role in the system
+      required:
+        - id
+        - email
+        - firstName
+        - lastName
+        - role
+
+    LoginRequest:
+      type: object
+      required:
+        - login
+        - password
+      properties:
+        login:
+          type: string
+          description: Email or username
+        password:
+          type: string
+          format: password
+
+    LoginResponse:
+      type: object
+      properties:
+        token:
+          type: string
+          description: JWT token for authentication
+        user:
+          $ref: '#/components/schemas/User'
+
+    RegisterRequest:
+      type: object
+      required:
+        - email
+        - password
+        - firstName
+        - lastName
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+        firstName:
+          type: string
+        lastName:
+          type: string
+        username:
+          type: string
+        phone:
+          type: string
+
+    Address:
+      type: object
+      properties:
+        id:
+          type: string
+        street:
+          type: string
+        city:
+          type: string
+        state:
+          type: string
+        postalCode:
+          type: string
+        country:
+          type: string
+        isDefault:
+          type: boolean
+      required:
+        - street
+        - city
+        - state
+        - postalCode
+        - country
+
+    AddressRequest:
+      type: object
+      properties:
+        street:
+          type: string
+        city:
+          type: string
+        state:
+          type: string
+        postalCode:
+          type: string
+        country:
+          type: string
+        isDefault:
+          type: boolean
+      required:
+        - street
+        - city
+        - state
+        - postalCode
+        - country
+
+    Product:
+      type: object
+      required:
+        - id
+        - name
+        - slug
+        - brand
+        - price
+        - volume
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier for the product
+        name:
+          type: string
+          minLength: 2
+          maxLength: 100
+          description: Name of the perfume
+        slug:
+          type: string
+          pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$'
+          description: URL-friendly version of the name
+        brand:
+          type: string
+          description: Brand/manufacturer name
+        category_id:
+          type: integer
+          description: ID of the product category
+        description:
+          type: string
+          description: Detailed product description
+        price:
+          type: number
+          format: float
+          minimum: 0
+          description: Product price in your currency
+        volume:
+          type: string
+          description: Volume of the perfume (e.g., '100ml')
+        fragrance_notes:
+          type: object
+          properties:
+            top:
+              type: array
+              items:
+                type: string
+            middle:
+              type: array
+              items:
+                type: string
+            base:
+              type: array
+              items:
+                type: string
+          description: Fragrance pyramid notes
+        stock_quantity:
+          type: integer
+          minimum: 0
+          description: Available stock quantity
+        is_featured:
+          type: boolean
+          description: Whether the product is featured
+        is_bestseller:
+          type: boolean
+          description: Whether the product is a bestseller
+        image:
+          type: string
+          format: uri
+          description: URL to product image
+    Category:
+      type: object
+      required:
+        - id
+        - name
+        - slug
+      properties:
+        id:
+          type: integer
+          description: Unique identifier for the category
+        name:
+          type: string
+          description: Name of the category
+        slug:
+          type: string
+          pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$'
+          description: URL-friendly version of the category name
+        description:
+          type: string
+          description: Category description
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message
+      example:
+        error: 'Product not found'
+    Review:
+      type: object
+      required:
+        - id
+        - userId
+        - productId
+        - rating
+        - comment
+      properties:
+        id:
+          type: integer
+        userId:
+          type: string
+        productId:
+          type: string
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        comment:
+          type: string
+        isVerified:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    WishlistItem:
+      type: object
+      required:
+        - id
+        - userId
+        - productId
+      properties:
+        id:
+          type: integer
+        userId:
+          type: string
+        productId:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
