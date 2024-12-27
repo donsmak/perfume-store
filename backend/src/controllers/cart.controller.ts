@@ -206,62 +206,6 @@ export const getCartTotal = async (
   }
 };
 
-export const createOrder = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> => {
-  try {
-    const { addressId, paymentMethod } = req.body;
-
-    const cart = await prisma.cart.findUnique({
-      where: { userId: req.user!.id },
-      include: { items: { include: { product: true } } },
-    });
-
-    if (!cart?.items.length) {
-      next(new ValidationError('Cart is empty'));
-      return;
-    }
-
-    await prisma.$transaction(async (tx) => {
-      const order = await tx.order.create({
-        data: {
-          userId: req.user!.id,
-          addressId,
-          paymentMethod,
-          status: 'PENDING',
-          total: cart.items.reduce((sum, item) => sum + item.product.price * item.quantity, 0),
-          items: {
-            create: cart.items.map((item) => ({
-              productId: item.productId,
-              quantity: item.quantity,
-              price: item.product.price,
-            })),
-          },
-        },
-      });
-
-      for (const item of cart.items) {
-        await tx.product.update({
-          where: { id: item.productId },
-          data: {
-            stockQuantity: { decrement: item.quantity },
-          },
-        });
-      }
-
-      await tx.cartItem.deleteMany({
-        where: { cartId: cart.id },
-      });
-    });
-
-    res.status(201).json({ message: 'Order created successfully' });
-  } catch (error) {
-    next(error);
-  }
-};
-
 export const removeFromCart = async (
   req: Request,
   res: Response,

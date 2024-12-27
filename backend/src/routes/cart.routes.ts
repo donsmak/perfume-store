@@ -6,13 +6,8 @@ import {
   createOrderSchema,
   removeFromCartSchema,
 } from '../schemas/validation/cart.schema';
-import {
-  getCart,
-  addToCart,
-  removeFromCart,
-  getCartTotal,
-  createOrder,
-} from '../controllers/cart.controller';
+import { getCart, addToCart, removeFromCart, getCartTotal } from '../controllers/cart.controller';
+import { createOrder } from '../controllers/order.controller';
 
 const router = Router();
 

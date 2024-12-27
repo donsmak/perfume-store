@@ -8,150 +8,154 @@ datasource db {
 }
 
 model User {
-  id                    Int       @id @default(autoincrement())
-  email                 String    @unique
-  username              String?   @unique 
-  password_hashed       String
+  id                   Int                 @id @default(autoincrement())
+  email                String              @unique
+  username             String?             @unique
+  password_hashed      String
   firstName            String
   lastName             String
   phone                String?
-  role                 String    @default("USER")
-  isEmailVerified      Boolean   @default(false)
+  role                 String              @default("USER")
+  isEmailVerified      Boolean             @default(false)
   verificationToken    String?
   resetPasswordToken   String?
   resetPasswordExpires DateTime?
-  lastLogin           DateTime?
+  lastLogin            DateTime?
   addresses            Address[]
-  orders              Order[]
-  reviews             Review[]
-  cart                Cart?
-  wishlist            WishlistItem[]
-  stockNotifications  StockNotification[]
-  createdAt           DateTime   @default(now())
-  updatedAt           DateTime   @updatedAt
+  orders               Order[]
+  reviews              Review[]
+  cart                 Cart?
+  wishlist             WishlistItem[]
+  stockNotifications   StockNotification[]
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
 }
 
 model Product {
-  id              Int       @id @default(autoincrement())
+  id            Int     @id @default(autoincrement())
   // Multilingual content
-  nameAr          String?    // Required Arabic name
-  nameFr          String   // Optional French name
-  nameEn          String?   // Optional English name
-  descriptionAr   String?   // Required Arabic description
-  descriptionFr   String   // Optional French description
-  descriptionEn   String?   // Optional English description
-  
-  slug            String    @unique
-  brand           String
-  categoryId      Int
-  price           Float
-  stockQuantity   Int
-  volume          String    // Format: "100ml"
-  
+  nameAr        String? // Required Arabic name
+  nameFr        String // Optional French name
+  nameEn        String? // Optional English name
+  descriptionAr String? // Required Arabic description
+  descriptionFr String // Optional French description
+  descriptionEn String? // Optional English description
+
+  slug          String @unique
+  brand         String
+  categoryId    Int
+  price         Float
+  stockQuantity Int    @default(0)
+  volume        String // Format: "100ml"
+
   // Notes as JSON strings for SQLite
-  topNotes        String    // JSON array
-  middleNotes     String    // JSON array
-  baseNotes       String    // JSON array
-  
+  topNotes    String // JSON array
+  middleNotes String // JSON array
+  baseNotes   String // JSON array
+
   // Product flags
-  isFeatured      Boolean   @default(false)
-  isBestseller    Boolean   @default(false)
-  
+  isFeatured   Boolean @default(false)
+  isBestseller Boolean @default(false)
+
   // Ratings
-  averageRating   Float?    @default(0)
-  totalReviews    Int       @default(0)
-  
+  averageRating Float? @default(0)
+  totalReviews  Int    @default(0)
+
   // Optional fields
   salePrice       Float?
   saleEndDate     DateTime?
-  concentration   String?   // Enum: Parfum, Eau de Parfum, etc.
+  concentration   String? // Enum: Parfum, Eau de Parfum, etc.
   gender          String?
   season          String?
   ingredients     String?
   countryOfOrigin String?
-  
+
   // Image and search
-  image           String
-  searchVector    String?   // For search functionality
-  
+  image        String
+  searchVector String? // For search functionality
+
   // Relationships
-  category        Category       @relation(fields: [categoryId], references: [id])
-  reviews         Review[]
-  orderItems      OrderItem[]
-  cartItems       CartItem[]
-  wishlistItems   WishlistItem[]
-  discount        Discount?      @relation(fields: [discountId], references: [id])
-  discountId      Int?
+  category           Category            @relation(fields: [categoryId], references: [id])
+  reviews            Review[]
+  orderItems         OrderItem[]
+  cartItems          CartItem[]
+  wishlistItems      WishlistItem[]
+  discount           Discount?           @relation(fields: [discountId], references: [id])
+  discountId         Int?
   stockNotifications StockNotification[]
-  
+
   // Timestamps
-  createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Category {
-  id              Int       @id @default(autoincrement())
-  nameAr          String    // Required Arabic name
-  nameFr          String?   // Optional French name
-  nameEn          String?   // Optional English name
-  descriptionAr   String
-  descriptionFr   String?
-  descriptionEn   String?
-  slug            String    @unique
-  products        Product[]
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id            Int       @id @default(autoincrement())
+  nameAr        String? // Required Arabic name
+  nameFr        String // Optional French name
+  nameEn        String? // Optional English name
+  descriptionAr String?
+  descriptionFr String
+  descriptionEn String?
+  slug          String    @unique
+  products      Product[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 }
 
 model Order {
-  id              Int       @id @default(autoincrement())
-  userId          Int
-  user            User      @relation(fields: [userId], references: [id])
-  addressId       Int
-  shippingAddress Address   @relation(fields: [addressId], references: [id])
-  status          String    @default("PENDING") // PENDING, PROCESSING, SHIPPED, DELIVERED, CANCELLED
-  total           Float
-  paymentStatus   String    @default("PENDING")
-  paymentMethod   String?
-  trackingNumber  String?
-  adminNotes      String?
-  notes           String?
-  discountCode    String?
-  discountAmount  Float     @default(0)
-  items           OrderItem[]
-  statusHistory   OrderStatusHistory[]
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-}
+  id                 Int                  @id @default(autoincrement())
+  user               User                 @relation(fields: [userId], references: [id])
+  userId             Int
+  shippingAddress    Address              @relation("OrderShippingAddress", fields: [addressId], references: [id])
+  addressId          Int
+  status             String               @default("PENDING")
+  subtotal           Float
+  discountAmount     Float                @default(0)
+  total              Float
+  paymentMethod      String
+  paymentStatus      String               @default("PENDING")
+  discountCode       String?
+  trackingNumber     String?
+  adminNotes         String?
+  orderItems         OrderItem[]
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  OrderStatusHistory OrderStatusHistory[]
 
-// ... (previous models remain the same)
+  @@index([userId])
+  @@index([addressId])
+}
 
 model OrderItem {
   id        Int      @id @default(autoincrement())
-  orderId   Int
   order     Order    @relation(fields: [orderId], references: [id])
-  productId Int
+  orderId   Int
   product   Product  @relation(fields: [productId], references: [id])
+  productId Int
   quantity  Int
-  price     Float    // Price at time of purchase
+  price     Float
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([orderId])
+  @@index([productId])
 }
 
 model OrderStatusHistory {
   id        Int      @id @default(autoincrement())
   orderId   Int
   order     Order    @relation(fields: [orderId], references: [id])
-  status    String   // PENDING, PROCESSING, SHIPPED, DELIVERED, CANCELLED
+  status    String // PENDING, PROCESSING, SHIPPED, DELIVERED, CANCELLED
   notes     String?
-  createdBy Int      // Admin user ID who made the change
+  createdBy Int // Admin user ID who made the change
   createdAt DateTime @default(now())
 }
 
 model Cart {
   id        Int        @id @default(autoincrement())
-  userId    Int?        @unique
-  user      User?       @relation(fields: [userId], references: [id])
+  userId    Int?       @unique
+  user      User?      @relation(fields: [userId], references: [id])
   guestId   String?    @unique
   items     CartItem[]
   expiresAt DateTime?
@@ -171,40 +175,42 @@ model CartItem {
 }
 
 model Address {
-  id           Int      @id @default(autoincrement())
-  userId       Int
-  user         User     @relation(fields: [userId], references: [id])
-  street       String
-  city         String
-  state        String
-  postalCode   String   // Moroccan postal code format: #####
-  country      String   @default("Morocco")
-  isDefault    Boolean  @default(false)
-  orders       Order[]
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id         Int      @id @default(autoincrement())
+  user       User     @relation(fields: [userId], references: [id])
+  userId     Int
+  street     String
+  city       String
+  state      String?
+  postalCode String?
+  country    String   @default("Morocco")
+  isDefault  Boolean  @default(false)
+  orders     Order[]  @relation("OrderShippingAddress")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([userId])
 }
 
 model Review {
-  id          Int      @id @default(autoincrement())
-  userId      Int
-  user        User     @relation(fields: [userId], references: [id])
-  productId   Int
-  product     Product  @relation(fields: [productId], references: [id])
-  rating      Int      // 1-5
-  comment     String   // Supports Arabic text
-  isVerified  Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  user       User     @relation(fields: [userId], references: [id])
+  productId  Int
+  product    Product  @relation(fields: [productId], references: [id])
+  rating     Int // 1-5
+  comment    String // Supports Arabic text
+  isVerified Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }
 
 model Discount {
   id          Int       @id @default(autoincrement())
   code        String    @unique
   description String
-  type        String    // PERCENTAGE or FIXED
+  type        String // PERCENTAGE or FIXED
   amount      Float
-  minPurchase Float?
+  minPurchase Float     @default(0)
   maxUses     Int?
   usedCount   Int       @default(0)
   startDate   DateTime
@@ -217,10 +223,10 @@ model Discount {
 
 model WishlistItem {
   id        Int      @id @default(autoincrement())
-  userId    Int
   user      User     @relation(fields: [userId], references: [id])
-  productId Int
+  userId    Int
   product   Product  @relation(fields: [productId], references: [id])
+  productId Int
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -254,7 +260,7 @@ model AuditLog {
   action    String
   entity    String
   entityId  Int
-  details   String   // JSON string for additional details
+  details   String // JSON string for additional details
   createdAt DateTime @default(now())
 }
 
@@ -262,7 +268,7 @@ model InventoryLog {
   id        Int      @id @default(autoincrement())
   productId Int
   quantity  Int
-  type      String   // IN, OUT
+  type      String // IN, OUT
   reason    String?
   createdAt DateTime @default(now())
 

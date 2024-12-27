@@ -1,5 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import config from '../config';
+import { AuthenticationError, ForbiddenError } from '../utils/errors';
 
 interface JwtPayload {
   userId: number;
@@ -22,20 +24,20 @@ export const auth = async (req: Request, res: Response, next: NextFunction) => {
     const token = req.header('Authorization')?.replace('Bearer ', '');
 
     if (!token) {
-      throw new Error();
+      throw new AuthenticationError('Please authenticate');
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET!) as JwtPayload;
     req.user = { id: decoded.userId, role: decoded.role };
     next();
   } catch (error) {
-    res.status(401).send({ message: 'Please authenticate' });
+    next(error);
   }
 };
 
 export const isAdmin = (req: Request, res: Response, next: NextFunction) => {
   if (req.user?.role !== 'ADMIN') {
-    return res.status(403).send({ message: 'You shall not pass!' });
+    throw new ForbiddenError('You shall not pass!');
   }
   next();
 };

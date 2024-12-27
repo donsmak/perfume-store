@@ -8,6 +8,7 @@ servers:
     description: Development server
 
 paths:
+  # Authentication Routes
   /auth/login:
     post:
       tags:
@@ -28,7 +29,11 @@ paths:
                 $ref: '#/components/schemas/LoginResponse'
         401:
           description: Invalid credentials
-
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  
   /auth/register:
     post:
       tags:
@@ -49,7 +54,12 @@ paths:
                 $ref: '#/components/schemas/LoginResponse'
         400:
           description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
+  # User Profile Routes
   /users/profile:
     get:
       tags:
@@ -66,10 +76,14 @@ paths:
                 $ref: '#/components/schemas/User'
         401:
           description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
     put:
       tags:
         - User
-      summary: Update user /users/profile
+      summary: Update user profile
       security:
         - BearerAuth: []
       requestBody:
@@ -77,18 +91,7 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                firstName:
-                  type: string
-                  description: User's first name
-                lastName:
-                  type: string
-                  description: User's last name
-                phone:
-                  type: string
-                  pattern: '^\+?[1-9]\d{1,14}$'
-                  description: Phone number in international format
+              $ref: '#/components/schemas/UpdateUserRequest'
             example:
               firstName: 'John'
               lastName: 'Doe'
@@ -121,6 +124,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  # Address Routes
   /address:
     get:
       tags:
@@ -130,16 +134,19 @@ paths:
         - BearerAuth: []
       responses:
         200:
-          description: Addresses retrieves successfully
+          description: Addresses retrieved successfully
           content:
             application/json:
               schema:
                 type: array
                 items:
                   $ref: '#/components/schemas/Address'
-        500:
-          description: Error fetching addresses
-
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
     post:
       tags:
         - Address
@@ -161,8 +168,16 @@ paths:
                 $ref: '#/components/schemas/Address'
         400:
           description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         401:
           description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
   /address/{id}:
     put:
@@ -177,6 +192,7 @@ paths:
           required: true
           schema:
             type: integer
+          description: Address ID
       requestBody:
         required: true
         content:
@@ -192,9 +208,16 @@ paths:
                 $ref: '#/components/schemas/Address'
         404:
           description: Address not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         401:
           description: Unauthorized
-
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
     delete:
       tags:
         - Address
@@ -207,14 +230,24 @@ paths:
           required: true
           schema:
             type: integer
-          description: Address id\
+          description: Address ID
       responses:
         204:
           description: Address deleted successfully
         404:
           description: Address not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         401:
           description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # Product Routes
   /products:
     get:
       tags:
@@ -232,11 +265,12 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/Product'
+  
   /products/filter:
     get:
       tags:
         - Products
-      summary: Get all products
+      summary: Get filtered products
       parameters:
         - in: query
           name: category
@@ -276,7 +310,7 @@ paths:
           description: Sort products by price (ascending or descending)
       responses:
         200:
-          description: List of products
+          description: List of filtered products
           content:
             application/json:
               schema:
@@ -286,6 +320,7 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/Product'
+
   /products/{slug}:
     get:
       tags:
@@ -317,6 +352,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+
   /categories:
     get:
       tags:
@@ -335,13 +371,597 @@ paths:
                     items:
                       $ref: '#/components/schemas/Category'
 
+  # Order Routes (Admin)
+  /admin/dashboard:
+    get:
+      tags:
+        - Admin
+      summary: Get dashboard statistics
+      security:
+        - BearerAuth: []
+      responses:
+        200:
+          description: Dashboard statistics retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  totalUsers:
+                    type: integer
+                  totalProducts:
+                    type: integer
+                  totalOrders:
+                    type: integer
+                  totalSales:
+                    type: number
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        500:
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/users:
+    get:
+      tags:
+        - Admin
+      summary: Get all users
+      security:
+        - BearerAuth: []
+      responses:
+        200:
+          description: List of users retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        500:
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/users/{userId}/role:
+    patch:
+      tags:
+        - Admin
+      summary: Update user role
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: integer
+          description: User ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                role:
+                  type: string
+                  enum: [USER, ADMIN]
+              required:
+                - role
+      responses:
+        200:
+          description: User role updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        400:
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        404:
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/products/{productId}:
+    patch:
+      tags:
+        - Admin
+      summary: Update a product
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: productId
+          required: true
+          schema:
+            type: integer
+          description: Product ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProductRequest'
+      responses:
+        200:
+          description: Product updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        400:
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        404:
+          description: Product not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/orders:
+    get:
+      tags:
+        - Admin
+      summary: Get all orders
+      security:
+        - BearerAuth: []
+      responses:
+        200:
+          description: List of all orders retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Order'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        500:
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/orders/{orderId}:
+    patch:
+      tags:
+        - Admin
+      summary: Update order status
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: orderId
+          required: true
+          schema:
+            type: integer
+          description: Order ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateOrderStatusRequest'
+      responses:
+        200:
+          description: Order status updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        400:
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        404:
+          description: Order not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # Cart Routes
+  /cart:
+    get:
+      tags:
+        - Cart
+      summary: Get user cart
+      security:
+        - BearerAuth: []
+      responses:
+        200:
+          description: User cart retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        500:
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /cart/total:
+    get:
+      tags:
+        - Cart
+      summary: Get cart total
+      security:
+        - BearerAuth: []
+      responses:
+        200:
+          description: Cart total retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total:
+                    type: number
+                  itemCount:
+                    type: integer
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CartItem'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        500:
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /cart/add:
+    post:
+      tags:
+        - Cart
+      summary: Add item to cart
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddToCartRequest'
+      responses:
+        200:
+          description: Item added to cart successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+        400:
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        500:
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /cart/checkout:
+    post:
+      tags:
+        - Cart
+      summary: Create a new order from the cart
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrderRequest'
+      responses:
+        201:
+          description: Order created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateOrderResponse'
+        400:
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        500:
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /cart/remove/{itemId}:
+    delete:
+      tags:
+        - Cart
+      summary: Remove item from cart
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: itemId
+          required: true
+          schema:
+            type: integer
+          description: Cart Item ID
+      responses:
+        200:
+          description: Item removed from cart successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+        400:
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        500:
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # Wishlist Routes
+  /wishlist:
+    get:
+      tags:
+        - Wishlist
+      summary: Get user wishlist
+      security:
+        - BearerAuth: []
+      responses:
+        200:
+          description: Wishlist retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WishlistItem'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        500:
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /wishlist/toggle/{productId}:
+    post:
+      tags:
+        - Wishlist
+      summary: Toggle product in wishlist
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: productId
+          required: true
+          schema:
+            type: integer
+          description: Product ID
+      responses:
+        200:
+          description: Wishlist updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  added:
+                    type: boolean
+                  product:
+                    $ref: '#/components/schemas/Product'
+        400:
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        500:
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # Review Routes
+  /reviews:
+    post:
+      tags:
+        - Reviews
+      summary: Create a new review
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateReviewRequest'
+      responses:
+        201:
+          description: Review created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Review'
+        400:
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        401:
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        500:
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /reviews/{productId}:
+    get:
+      tags:
+        - Reviews
+      summary: Get reviews for a product
+      parameters:
+        - in: path
+          name: productId
+          required: true
+          schema:
+            type: string
+          description: Product ID
+      responses:
+        200:
+          description: Product reviews retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  reviews:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Review'
+                  stats:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        rating:
+                          type: integer
+                        count:
+                          type: integer
+        400:
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        500:
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
 components:
   securitySchemes:
     BearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
+
   schemas:
+    # User Schemas
     User:
       type: object
       properties:
@@ -424,11 +1044,27 @@ components:
         phone:
           type: string
 
+    UpdateUserRequest:
+      type: object
+      properties:
+        firstName:
+          type: string
+          description: User's first name
+        lastName:
+          type: string
+          description: User's last name
+        phone:
+          type: string
+          pattern: '^\+?[1-9]\d{1,14}$'
+          description: Phone number in international format
+
+    # Address Schemas
     Address:
       type: object
       properties:
         id:
-          type: string
+          type: integer
+          description: Address ID
         street:
           type: string
         city:
@@ -470,6 +1106,7 @@ components:
         - postalCode
         - country
 
+    # Product Schemas
     Product:
       type: object
       required:
@@ -540,6 +1177,54 @@ components:
           type: string
           format: uri
           description: URL to product image
+
+    UpdateProductRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        slug:
+          type: string
+          pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$'
+        brand:
+          type: string
+        category_id:
+          type: integer
+        description:
+          type: string
+        price:
+          type: number
+          format: float
+          minimum: 0
+        volume:
+          type: string
+        fragrance_notes:
+          type: object
+          properties:
+            top:
+              type: array
+              items:
+                type: string
+            middle:
+              type: array
+              items:
+                type: string
+            base:
+              type: array
+              items:
+                type: string
+        stock_quantity:
+          type: integer
+          minimum: 0
+        is_featured:
+          type: boolean
+        is_bestseller:
+          type: boolean
+        image:
+          type: string
+          format: uri
+
+    # Category Schemas
     Category:
       type: object
       required:
@@ -560,29 +1245,247 @@ components:
         description:
           type: string
           description: Category description
-    Error:
+
+    # Order Schemas
+    Order:
       type: object
       properties:
-        error:
+        id:
+          type: integer
+          description: Order ID
+        userId:
+          type: integer
+          description: User ID who placed the order
+        shippingAddress:
+          $ref: '#/components/schemas/Address'
+        status:
           type: string
-          description: Error message
-      example:
-        error: 'Product not found'
-    Review:
+          enum: [PENDING, CONFIRMED, PROCESSING, SHIPPED, DELIVERED, CANCELLED]
+        subtotal:
+          type: number
+          format: float
+        discountAmount:
+          type: number
+          format: float
+        total:
+          type: number
+          format: float
+        paymentMethod:
+          type: string
+          enum: [CASH_ON_DELIVERY, BANK_TRANSFER, STORE_PICKUP]
+        paymentStatus:
+          type: string
+          enum: [PENDING, COMPLETED, FAILED]
+        discountCode:
+          type: string
+          nullable: true
+        trackingNumber:
+          type: string
+          nullable: true
+        adminNotes:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItem'
+      required:
+        - id
+        - userId
+        - shippingAddress
+        - status
+        - subtotal
+        - discountAmount
+        - total
+        - paymentMethod
+        - paymentStatus
+        - createdAt
+        - updatedAt
+
+    OrderItem:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Order Item ID
+        orderId:
+          type: integer
+          description: Associated Order ID
+        product:
+          $ref: '#/components/schemas/Product'
+        quantity:
+          type: integer
+          minimum: 1
+        price:
+          type: number
+          format: float
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - orderId
+        - product
+        - quantity
+        - price
+        - createdAt
+        - updatedAt
+
+    CreateOrderRequest:
+      type: object
+      required:
+        - addressId
+        - paymentMethod
+        - items
+      properties:
+        addressId:
+          type: integer
+          description: ID of the shipping address
+        paymentMethod:
+          type: string
+          enum: [CASH_ON_DELIVERY, BANK_TRANSFER, STORE_PICKUP]
+        items:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            properties:
+              productId:
+                type: integer
+                description: Product ID
+              quantity:
+                type: integer
+                minimum: 1
+                description: Quantity of the product
+        discountCode:
+          type: string
+          nullable: true
+
+    CreateOrderResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        order:
+          $ref: '#/components/schemas/Order'
+      required:
+        - message
+        - order
+
+    UpdateOrderStatusRequest:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum: [PENDING, CONFIRMED, PROCESSING, SHIPPED, DELIVERED, CANCELLED]
+
+    # Cart Schemas
+    Cart:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Cart ID
+        userId:
+          type: integer
+          description: User ID
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CartItem'
+      required:
+        - id
+        - userId
+        - items
+
+    CartItem:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Cart Item ID
+        cartId:
+          type: integer
+          description: Associated Cart ID
+        product:
+          $ref: '#/components/schemas/Product'
+        quantity:
+          type: integer
+          minimum: 1
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - cartId
+        - product
+        - quantity
+        - createdAt
+        - updatedAt
+
+    AddToCartRequest:
+      type: object
+      required:
+        - productId
+        - quantity
+      properties:
+        productId:
+          type: integer
+          description: ID of the product to add
+        quantity:
+          type: integer
+          minimum: 1
+          description: Quantity of the product
+
+    # Wishlist Schemas
+    WishlistItem:
       type: object
       required:
         - id
         - userId
         - productId
-        - rating
-        - comment
       properties:
         id:
           type: integer
+          description: Wishlist Item ID
+        userId:
+          type: integer
+          description: User ID
+        productId:
+          type: integer
+          description: Product ID
+        createdAt:
+          type: string
+          format: date-time
+
+    # Review Schemas
+    Review:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Review ID
         userId:
           type: string
+          format: uuid
+          description: User ID who wrote the review
         productId:
-          type: string
+          type: integer
+          description: Product ID being reviewed
         rating:
           type: integer
           minimum: 1
@@ -594,20 +1497,46 @@ components:
         createdAt:
           type: string
           format: date-time
-
-    WishlistItem:
-      type: object
       required:
         - id
         - userId
         - productId
+        - rating
+        - comment
+        - isVerified
+        - createdAt
+
+    CreateReviewRequest:
+      type: object
+      required:
+        - productId
+        - rating
+        - comment
       properties:
-        id:
-          type: integer
-        userId:
-          type: string
         productId:
           type: integer
-        createdAt:
+          description: ID of the product to review
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+          description: Rating given by the user
+        comment:
           type: string
-          format: date-time
+          description: Review comment
+
+    # Error Schema
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message
+      example:
+        error: 'Product not found'
+
+    # Additional Schemas
+    # Add any additional schemas as needed (e.g., for Orders, OrderItems, etc.)
+
+security:
+  - BearerAuth: []

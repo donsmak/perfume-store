@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { NotFoundError, ValidationError } from '../utils/errors';
+import { transformProduct } from '../utils/transformers';
 
 const prisma = new PrismaClient();
 
@@ -54,20 +55,15 @@ export const getWishlist = async (
     const wishlist = await prisma.wishlistItem.findMany({
       where: { userId: req.user!.id },
       include: {
-        product: {
-          select: {
-            id: true,
-            name: true,
-            brand: true,
-            price: true,
-            image: true,
-            stockQuantity: true,
-            slug: true,
-          },
-        },
+        product: true,
       },
     });
-    res.json(wishlist);
+    const transformedWishList = wishlist.map((item) => ({
+      id: item.id,
+      product: transformProduct(item.product),
+      createdAt: item.createdAt,
+    }));
+    res.json(transformedWishList);
   } catch (error) {
     next(error);
   }
