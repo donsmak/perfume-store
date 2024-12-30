@@ -1,71 +1,87 @@
 import { z } from 'zod';
+import {
+  idSchema,
+  slugSchema,
+  priceSchema,
+  paginationSchema,
+  successResponseSchema,
+} from './common.schema';
 
-const productBaseSchema = {
-  name: z.object({
-    ar: z.string().min(3, 'Arabic name must be at least 3 characters').optional(),
-    fr: z.string().min(3, 'French name must be at least 3 characters'),
-    en: z.string().min(3, 'English name must be at least 3 characters').optional(),
-  }),
-  description: z.object({
-    ar: z.string().min(10, 'Arabic description must be at least 10 characters').optional(),
-    fr: z.string().min(10, 'French description must be at least 10 characters'),
-    en: z.string().min(10, 'English description must be at least 10 characters').optional(),
-  }),
-  price: z
-    .number()
-    .positive('Price must be positive')
-    .max(100000, 'Price cannot exceed 100,000 MAD'),
-  stockQuantity: z.number().int().min(0, 'Stock quantity must be non-negative'),
-  brand: z.string().min(1, 'Brand is required'),
-  categoryId: z.number().int().positive('Category ID is required'),
-  volume: z.string().regex(/^\d+(\.\d+)?\s*(ml|ML)$/, 'Volume must be in ml format (e.g., 100ml)'),
-  topNotes: z.array(z.string()).min(1, 'At least one top note is required'),
-  middleNotes: z.array(z.string()).min(1, 'At least one middle note is required'),
-  baseNotes: z.array(z.string()).min(1, 'At least one base note is required'),
-  isFeatured: z.boolean().optional(),
-  isBestseller: z.boolean().optional(),
-  origin: z.string().optional(),
-  concentration: z.enum(['Parfum', 'Eau de Parfum', 'Eau de Toilette', 'Eau de Cologne']),
-};
+// Base product schema
+const productBaseSchema = z.object({
+  name: z.string().min(2),
+  description: z.string().min(10),
+  slug: slugSchema,
+  brand: z.string().min(2),
+  price: priceSchema,
+  volume: z.string(),
+  stockQuantity: z.number().int().min(0),
+  isFeatured: z.boolean().default(false),
+  isBestseller: z.boolean().default(false),
+  image: z.string().url(),
+  categoryId: idSchema,
+  topNotes: z.string(),
+  middleNotes: z.string(),
+  baseNotes: z.string(),
+});
 
-export const createProductSchema = z.object({
-  body: z.object(productBaseSchema),
-  file: z
+// Request schemas
+export const createProductRequest = z.object({
+  body: productBaseSchema.omit({ slug: true }), // slug will be generated
+});
+
+export const updateProductRequest = z.object({
+  params: z.object({
+    id: idSchema,
+  }),
+  body: productBaseSchema.partial(),
+});
+
+export const getProductRequest = z.object({
+  params: z.object({
+    id: idSchema,
+  }),
+});
+
+export const productFiltersRequest = z.object({
+  query: z
     .object({
-      fieldname: z.string(),
-      originalname: z.string(),
-      encoding: z.string(),
-      mimetype: z.string().regex(/^image\/(jpeg|png|webp)$/, 'Invalid image format'),
-      size: z.number().max(5242880, 'Image size must be less than 5MB'),
-      destination: z.string(),
-      filename: z.string(),
-      path: z.string(),
+      page: z.number().int().min(1).optional().default(1),
+      limit: z.number().int().min(1).max(100).optional().default(10),
+      category: z.string().optional(),
+      brand: z.string().optional(),
+      minPrice: priceSchema.optional(),
+      maxPrice: priceSchema.optional(),
+      featured: z.boolean().optional(),
+      bestseller: z.boolean().optional(),
+      sort: z.enum(['price_asc', 'price_desc', 'rating_desc', 'newest']).optional(),
+      notes: z.array(z.string()).optional(),
     })
     .optional(),
 });
 
-export const updateProductSchema = z.object({
-  params: z.object({
-    productId: z.string().regex(/^\d+$/, 'Invalid product ID'),
-  }),
-  body: z.object(productBaseSchema).partial(),
-  file: createProductSchema.shape.file.optional(),
+// Response schemas
+const productResponseSchema = productBaseSchema.extend({
+  id: idSchema,
+  averageRating: z.number().nullable(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+  category: z
+    .object({
+      id: idSchema,
+      name: z.string(),
+      slug: slugSchema,
+    })
+    .optional(),
 });
 
-export const productFilterSchema = z.object({
-  query: z.object({
-    category: z.string().optional(),
-    brand: z.string().optional(),
-    minPrice: z.string().regex(/^\d+$/, 'Invalid minimum price').optional(),
-    maxPrice: z.string().regex(/^\d+$/, 'Invalid maximum price').optional(),
-    featured: z.enum(['true', 'false']).optional(),
-    bestseller: z.enum(['true', 'false']).optional(),
-    sort: z.enum(['price_asc', 'price_desc', 'newest', 'rating', 'bestselling']).optional(),
-    concentration: z
-      .enum(['Parfum', 'Eau de Parfum', 'Eau de Toilette', 'Eau de Cologne'])
-      .optional(),
-    page: z.string().regex(/^\d+$/, 'Invalid page number').optional(),
-    limit: z.string().regex(/^\d+$/, 'Invalid limit').optional(),
-    lang: z.enum(['ar', 'fr', 'en']).default('ar'),
-  }),
-});
+export const productListResponseSchema = successResponseSchema(
+  z.object({
+    items: z.array(productResponseSchema),
+    total: z.number(),
+    page: z.number(),
+    pageSize: z.number(),
+  })
+);
+
+export const productResponseWrapper = successResponseSchema(productResponseSchema);

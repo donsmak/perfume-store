@@ -1,115 +1,96 @@
 import { Request, Response, NextFunction } from 'express';
-import { PrismaClient } from '@prisma/client';
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
-import { UserRoles } from '../constants';
+import { prisma } from '../lib/prisma';
 import { AuthenticationError, ValidationError } from '../utils/errors';
+import { registerRequest, loginRequest } from '../schemas/validation/auth.schema';
+import { comparePasswords, generateToken, hashPassword } from '../utils/security';
 
-const prisma = new PrismaClient();
-const JWT_SECRET = process.env.JWT_SECRET!;
+export class AuthController {
+  /**
+   * Register a new user
+   */
+  public register = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const validatedData = registerRequest.parse({ body: req.body });
 
-export const register = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> => {
-  try {
-    const { email, username, password, firstName, lastName, phone } = req.body;
-
-    const existingEmail = await prisma.user.findUnique({
-      where: { email },
-    });
-
-    if (existingEmail) {
-      next(new ValidationError('Email already registered'));
-      return;
-    }
-
-    if (username) {
-      const existingUsername = await prisma.user.findUnique({
-        where: { username },
+      const existingUser = await prisma.user.findUnique({
+        where: { email: validatedData.body.email },
       });
 
-      if (existingUsername) {
-        next(new ValidationError('Username already taken'));
-        return;
+      if (existingUser) {
+        throw new ValidationError('User already exists');
       }
+
+      const hashedPassword = await hashPassword(validatedData.body.password);
+
+      const user = await prisma.user.create({
+        data: {
+          email: validatedData.body.email,
+          password: hashedPassword,
+          firstName: validatedData.body.firstName,
+          lastName: validatedData.body.lastName,
+          phone: validatedData.body.phone,
+          role: 'USER',
+        },
+      });
+
+      const token = generateToken({ userId: user.id, role: user.role });
+
+      res.status(201).json({
+        status: 'success',
+        data: {
+          token,
+          user: {
+            id: user.id,
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            role: user.role,
+          },
+        },
+      });
+    } catch (error) {
+      next(error);
     }
+  };
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+  /**
+   * Login user
+   */
+  public login = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const validatedData = loginRequest.parse({ body: req.body });
 
-    const user = await prisma.user.create({
-      data: {
-        email,
-        username,
-        password_hashed: hashedPassword,
-        firstName,
-        lastName,
-        phone,
-      },
-      select: {
-        id: true,
-        email: true,
-        username: true,
-        firstName: true,
-        lastName: true,
-        phone: true,
-        role: true,
-      },
-    });
+      const user = await prisma.user.findUnique({
+        where: { email: validatedData.body.email },
+      });
 
-    const token = jwt.sign({ userId: user.id, role: user.role }, JWT_SECRET, { expiresIn: '1h' });
-    res.status(200).json({ token, user });
-  } catch (error) {
-    next(error);
-  }
-};
+      if (!user) {
+        throw new AuthenticationError('Invalid credentials');
+      }
 
-export const login = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> => {
-  try {
-    const { login, password } = req.body;
+      const isValidPassword = await comparePasswords(validatedData.body.password, user.password);
 
-    const user = await prisma.user.findFirst({
-      where: {
-        OR: [{ email: login }, { username: login }],
-      },
-    });
+      if (!isValidPassword) {
+        throw new AuthenticationError('Invalid credentials');
+      }
 
-    if (!user) {
-      next(new AuthenticationError('Invalid credentials'));
-      return;
+      const token = generateToken({ userId: user.id, role: user.role });
+
+      res.json({
+        status: 'success',
+        data: {
+          token,
+          user: {
+            id: user.id,
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            role: user.role,
+          },
+        },
+      });
+    } catch (error) {
+      next(error);
     }
-
-    const isValidPassword = await bcrypt.compare(password, user.password_hashed);
-
-    if (!isValidPassword) {
-      next(new AuthenticationError('Invalid credentials'));
-      return;
-    }
-
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { lastLogin: new Date() },
-    });
-
-    const token = jwt.sign({ userId: user.id, role: user.role }, JWT_SECRET, { expiresIn: '24h' });
-
-    res.json({
-      user: {
-        id: user.id,
-        email: user.email,
-        username: user.username,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        role: user.role,
-      },
-      token,
-    });
-  } catch (error) {
-    next(error);
-  }
-};
+  };
+}

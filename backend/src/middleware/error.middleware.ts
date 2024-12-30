@@ -5,75 +5,46 @@ import { Prisma } from '@prisma/client';
 import { ZodError } from 'zod';
 
 export const errorHandler: ErrorRequestHandler = (
-  err: Error | AppError,
+  err: unknown,
   req: Request,
   res: Response,
   next: NextFunction
 ): void => {
-  logger.error({
-    message: err.message,
-    stack: err.stack,
-    path: req.path,
-    method: req.method,
-    body: req.body,
-    params: req.params,
-    query: req.query,
-  });
+  if (err instanceof ZodError) {
+    logger.warn(`Validation Failed ${err.errors}`);
+    res.status(400).json({
+      status: 'error',
+      message: 'Validation Failed',
+      details: err.errors,
+      code: 'VALIDATION_ERROR',
+    });
+    return;
+  }
 
   if (err instanceof AppError) {
+    logger.warn(`App Error: ${err.message}`);
     res.status(err.statusCode).json({
       status: 'error',
-      code: err.code,
       message: err.message,
+      code: err.code,
     });
     return;
   }
 
   if (err instanceof Prisma.PrismaClientKnownRequestError) {
-    switch (err.code) {
-      case 'P2002':
-        res.status(409).json({
-          status: 'error',
-          code: 'DUPLICATE_ENTRY',
-          message: 'A record with this value already exists',
-        });
-        return;
-      case 'P2025':
-        res.status(404).json({
-          status: 'error',
-          code: 'NOT_FOUND',
-          message: 'Record not found',
-        });
-        return;
-      default:
-        res.status(500).json({
-          status: 'error',
-          code: 'DATABASE_ERROR',
-          message: 'Database operation failed',
-        });
-        return;
-    }
-  }
-
-  if (err instanceof ZodError) {
+    logger.error(`Database Error: ${err.message}`);
     res.status(400).json({
       status: 'error',
-      code: 'VALIDATION_ERROR',
-      message: 'Validation failed',
-      errors: err.errors.map((e) => ({
-        field: e.path.join('.'),
-        message: e.message,
-      })),
+      message: 'Database operation failed',
+      code: 'DATABASE_ERROR',
     });
     return;
   }
 
+  logger.error('Unhandled Error:', err);
   res.status(500).json({
     status: 'error',
+    message: 'Internal server error',
     code: 'INTERNAL_SERVER_ERROR',
-    message:
-      process.env.NODE_ENV === 'production'
-        ? 'Internal server error'
-        : err.message,
   });
 };

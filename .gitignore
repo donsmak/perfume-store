@@ -32,7 +32,6 @@
 **/.nyc_output
 
 # Production
-**/dist
 **/build
 **/out
 
@@ -86,3 +85,6 @@ Thumbs.db
 # Upload directories
 /backend/uploads/
 /backend/public/uploads/
+
+# Generated TSOA Files
+

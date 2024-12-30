@@ -9,6 +9,29 @@ redis.on('error', (error) => {
 });
 
 export class CacheService {
+  async get(key: string): Promise<string | null> {
+    try {
+      const value = await redis.get(key);
+      if (value) {
+        logger.info(`Cache hit for key: ${key}`);
+      } else {
+        logger.info(`Cache miss for key: ${key}`);
+      }
+      return value;
+    } catch (error) {
+      logger.error(`Cache get error for key ${key}:`, error);
+      return null;
+    }
+  }
+
+  async set(key: string, value: string, ttl: 3600): Promise<void> {
+    try {
+      await redis.setex(key, ttl, value);
+      logger.info(`Cache set for key: ${key}`);
+    } catch (error) {
+      logger.error(`Cache set error for key ${key}`, error);
+    }
+  }
   async getOrSet<T>(key: string, callback: () => Promise<T>, ttl = 3600): Promise<T> {
     try {
       const cached = await redis.get(key);

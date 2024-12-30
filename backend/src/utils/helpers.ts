@@ -1,15 +1,23 @@
-import { randomBytes } from 'crypto';
-
 export const generateSlug = (text: string): string => {
   return text
     .toLowerCase()
-    .replace(/\s+/g, '-')
-    .replace(/[^\w\-]+/g, '')
-    .replace(/\-\-+/g, '-')
-    .replace(/^-+/, '')
-    .replace(/-+$/, '');
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)+/g, '');
 };
 
-export const generateGuestId = (): string => {
-  return `guest_${randomBytes(8).toString('hex')}`;
+export const formatPrice = (price: number): string => {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'MAD',
+  }).format(price);
+};
+
+export const generateRandomString = (length: number): string => {
+  return Math.random()
+    .toString(36)
+    .substring(2, length + 2);
+};
+
+export const delay = (ms: number): Promise<void> => {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 };

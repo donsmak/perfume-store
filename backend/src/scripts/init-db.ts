@@ -1,41 +1,70 @@
 import { PrismaClient } from '@prisma/client';
 import { hash } from 'bcryptjs';
 import { mockProducts } from '../data/mock-products';
+import { Database } from 'sqlite3';
+import { dirname, join } from 'path';
+import { mkdir } from 'fs/promises';
 
 const prisma = new PrismaClient();
+
+async function enableWALMode() {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const dbPath = join(__dirname, '../../prisma/store.db')
+
+      await mkdir(dirname(dbPath), { recursive: true });
+      const db = new Database(dbPath);
+
+      db.serialize(() => {
+        db.run('PRAGMA journal_mode=WAL', (err) => {
+          if (err) {
+            db.close();
+            reject(err);
+          }
+        });
+
+        db.run('PRAGMA synchronous=NORMAL', (err) => {
+          if (err) {
+            db.close();
+            reject(err);
+          }
+        });
+
+        db.close((err) => {
+          if (err) reject(err);
+          else resolve(true);
+        });
+      });
+    } catch (err) {
+      reject(err);
+    }
+  });
+}
 
 async function main() {
   try {
     console.log('Initializing database...');
 
+    await enableWALMode();
+
+    console.log('WAL mode enabled');
+
     // Create categories
     const categories = [
       {
-        nameEn: "Men's Fragrances",
-        nameFr: 'Parfums Homme',
-        nameAr: 'عطور رجالية',
+        name: "Men's Fragrances",
         slug: 'mens-fragrances',
-        descriptionEn: 'Elegant and refined masculine fragrances',
-        descriptionFr: 'Une collection de parfums masculins élégants et raffinés',
-        descriptionAr: 'عطور رجالية أنيقة وراقية',
+        description: 'Elegant and refined masculine fragrances',
       },
       {
-        nameEn: "Women's Fragrances",
-        nameFr: 'Parfums Femme',
-        nameAr: 'عطور نسائية',
+        name: "Women's Fragrances",
         slug: 'womens-fragrances',
-        descriptionEn: 'Delicate and enchanting feminine fragrances',
-        descriptionFr: 'Des parfums féminins délicats et envoûtants',
-        descriptionAr: 'عطور نسائية ناعمة وساحرة',
+        description: 'Delicate and enchanting feminine fragrances',
       },
       {
-        nameEn: 'Unisex Fragrances',
-        nameFr: 'Parfums Unisexe',
-        nameAr: 'عطور للجنسين',
+        name: 'Unisex Fragrances',
         slug: 'unisex-fragrances',
-        descriptionEn: 'Universal fragrances for everyone',
-        descriptionFr: 'Des fragrances universelles pour tous',
-        descriptionAr: 'عطور عالمية للجميع',
+        description: 'Universal fragrances for everyone',
       },
     ];
 
@@ -46,9 +75,10 @@ async function main() {
       update: {},
       create: {
         email: 'admin@example.com',
-        password_hashed: adminPassword,
+        password: adminPassword,
         firstName: 'Admin',
         lastName: 'User',
+        phone: '1234567890',
         role: 'ADMIN',
         isEmailVerified: true,
       },
@@ -61,15 +91,7 @@ async function main() {
       await prisma.category.upsert({
         where: { slug: category.slug },
         update: {},
-        create: {
-          nameEn: category.nameEn,
-          nameFr: category.nameFr,
-          nameAr: category.nameAr,
-          slug: category.slug,
-          descriptionEn: category.descriptionEn,
-          descriptionFr: category.descriptionFr,
-          descriptionAr: category.descriptionAr,
-        },
+        create: category,
       });
     }
 
@@ -80,28 +102,7 @@ async function main() {
       await prisma.product.upsert({
         where: { slug: product.slug },
         update: {},
-        create: {
-          nameEn: product.name,
-          nameFr: product.name,
-          nameAr: product.name,
-          slug: product.slug,
-          brand: product.brand,
-          descriptionEn: product.description,
-          descriptionFr: product.description,
-          descriptionAr: product.description,
-          price: product.price,
-          volume: product.volume,
-          stockQuantity: product.stockQuantity,
-          isFeatured: product.isFeatured,
-          isBestseller: product.isBestseller,
-          image: product.image,
-          categoryId: product.categoryId,
-          // Convert arrays to JSON strings for SQLite storage
-          topNotes: JSON.stringify(product.topNotes.split(',').map((note) => note.trim())),
-          middleNotes: JSON.stringify(product.middleNotes.split(',').map((note) => note.trim())),
-          baseNotes: JSON.stringify(product.baseNotes.split(',').map((note) => note.trim())),
-          searchVector: '', // Add empty searchVector as it's required
-        },
+        create: product,
       });
     }
 
@@ -114,7 +115,4 @@ async function main() {
   }
 }
 
-main().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
+main();
