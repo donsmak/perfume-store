@@ -2,6 +2,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import express from 'express';
+import { initRedis } from './config/redis.config';
 import cors from 'cors';
 import helmet from 'helmet';
 import { errorHandler } from './middleware/error.middleware';
@@ -11,41 +12,56 @@ import { rateLimiter } from './middleware/rateLimiter.middleware';
 import config from './config';
 import categoryRoutes from './routes/category.routes';
 import authRoutes from './routes/auth.routes';
-
+import productRoutes from './routes/product.routes';
+import { cacheService } from './services/cache.service';
 const app = express();
 
-// Middleware
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(morgan('dev'));
+async function startServer() {
+  try {
+    // Initialize cache service
+    await cacheService.initialize();
 
-// Security middleware
-app.use(cors(config.cors));
-app.use(helmet());
-app.use(rateLimiter);
+    // Initialize Redis before starting the server
+    await initRedis();
+    // Middleware
+    app.use(express.json());
+    app.use(express.urlencoded({ extended: true }));
+    app.use(morgan('dev'));
 
-// Routes
-app.use('/api/v1/categories', categoryRoutes);
-app.use('/api/v1/auth', authRoutes);
+    // Security middleware
+    app.use(cors(config.cors));
+    app.use(helmet());
+    app.use(rateLimiter);
 
-// Error handling
-process.on('unhandledRejection', (err: Error) => {
-  logger.error('UnhandledRejection', err.message);
-  logger.error(err.stack);
-});
+    // Routes
+    app.use('/api/v1/categories', categoryRoutes);
+    app.use('/api/v1/auth', authRoutes);
+    app.use('/api/v1/products', productRoutes);
 
-process.on('uncaughtException', (err: Error) => {
-  logger.error('Uncaught Exception', err.message);
-  logger.error(err.stack);
-  process.exit(1);
-});
+    // Error handling
+    process.on('unhandledRejection', (err: Error) => {
+      logger.error('UnhandledRejection', err.message);
+      logger.error(err.stack);
+    });
 
-// Error handling middleware should be last
-app.use(errorHandler);
+    process.on('uncaughtException', (err: Error) => {
+      logger.error('Uncaught Exception', err.message);
+      logger.error(err.stack);
+      process.exit(1);
+    });
 
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  logger.info(`Server is running on port ${PORT}`);
-});
+    app.use(errorHandler);
+
+    const PORT = process.env.PORT || 5000;
+    app.listen(PORT, () => {
+      logger.info(`Server is running on port ${PORT}`);
+    });
+  } catch (error) {
+    logger.error('Failed to start server:', error);
+    process.exit(1);
+  }
+}
+
+startServer();
 
 export default app;

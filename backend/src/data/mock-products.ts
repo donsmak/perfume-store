@@ -9,6 +9,8 @@ export const mockProducts = [
     volume: '100ml',
     stockQuantity: 25,
     image: '/products/men/1-million-parfum.jpg',
+    isFeatured: true,
+    isBestseller: true,
   },
   {
     name: 'Sauvage',
@@ -20,6 +22,8 @@ export const mockProducts = [
     volume: '100ml',
     stockQuantity: 30,
     image: '/products/men/sauvage.jpg',
+    isFeatured: false,
+    isBestseller: true,
   },
   {
     name: 'BOSS',
@@ -31,6 +35,8 @@ export const mockProducts = [
     volume: '100ml',
     stockQuantity: 20,
     image: '/products/men/hugo-boss.jpg',
+    isFeatured: true,
+    isBestseller: false,
   },
   {
     name: 'La Vie Est Belle',
@@ -42,6 +48,8 @@ export const mockProducts = [
     volume: '75ml',
     stockQuantity: 35,
     image: '/products/women/la-vie-est-belle.jpg',
+    isFeatured: false,
+    isBestseller: false,
   },
   {
     name: 'Coco Mademoiselle',
@@ -53,6 +61,8 @@ export const mockProducts = [
     volume: '100ml',
     stockQuantity: 15,
     image: '/products/women/chanel-coco-eau.jpg',
+    isFeatured: true,
+    isBestseller: true,
   },
   {
     name: 'Euphoria',
@@ -64,6 +74,8 @@ export const mockProducts = [
     volume: '100ml',
     stockQuantity: 28,
     image: '/products/women/euphoria-for-women.jpg',
+    isFeatured: false,
+    isBestseller: false,
   },
   {
     name: 'Lady Million',
@@ -75,6 +87,8 @@ export const mockProducts = [
     volume: '80ml',
     stockQuantity: 22,
     image: '/products/women/rabanne-lady-million.jpg',
+    isFeatured: true,
+    isBestseller: true,
   },
   {
     name: 'Amber Oud',
@@ -86,5 +100,7 @@ export const mockProducts = [
     volume: '50ml',
     stockQuantity: 10,
     image: '/products/unisex/amber-oud.jpg',
+    isFeatured: false,
+    isBestseller: false,
   },
 ];

@@ -1,17 +1,22 @@
-import Redis from 'ioredis';
+import { Redis } from 'ioredis';
+import { initRedis } from '../config/redis.config';
 import { logger } from '../utils/logger';
-import { getRedisClient } from '../config/redis.config';
 
-const redis = new Redis(process.env.REDIS_URL!);
+class CacheService {
+  private redis: Redis;
 
-redis.on('error', (error) => {
-  logger.error('Redis connection error', error);
-});
+  async initialize() {
+    try {
+      this.redis = await initRedis();
+    } catch (error) {
+      logger.error('Failed to initialize cache service:', error);
+      throw error;
+    }
+  }
 
-export class CacheService {
   async get(key: string): Promise<string | null> {
     try {
-      const value = await redis.get(key);
+      const value = await this.redis.get(key);
       if (value) {
         logger.info(`Cache hit for key: ${key}`);
       } else {
@@ -24,17 +29,19 @@ export class CacheService {
     }
   }
 
-  async set(key: string, value: string, ttl: 3600): Promise<void> {
+  async set(key: string, value: any, ttl: number): Promise<void> {
     try {
-      await redis.setex(key, ttl, value);
+      const stringValue = typeof value === 'string' ? value : JSON.stringify(value);
+      await this.redis.setex(key, ttl, stringValue);
       logger.info(`Cache set for key: ${key}`);
     } catch (error) {
-      logger.error(`Cache set error for key ${key}`, error);
+      logger.error(`Cache set error for key ${key}:`, error);
     }
   }
+
   async getOrSet<T>(key: string, callback: () => Promise<T>, ttl = 3600): Promise<T> {
     try {
-      const cached = await redis.get(key);
+      const cached = await this.redis.get(key);
       if (cached) {
         logger.info(`Cache hit for key: ${key}`);
         return JSON.parse(cached);
@@ -43,7 +50,7 @@ export class CacheService {
       logger.info(`Cache miss for key: ${key}`);
 
       const fresh = await callback();
-      await redis.setex(key, ttl, JSON.stringify(fresh));
+      await this.set(key, fresh, ttl);
 
       return fresh;
     } catch (error) {
@@ -54,7 +61,7 @@ export class CacheService {
 
   async invalidate(key: string): Promise<void> {
     try {
-      await redis.del(key);
+      await this.redis.del(key);
       logger.info(`Cache invalidated for key: ${key}`);
     } catch (error) {
       logger.error(`Cache invalidation error for key ${key}:`, error);
@@ -63,15 +70,13 @@ export class CacheService {
 
   async invalidatePattern(pattern: string): Promise<void> {
     try {
-      const redis = getRedisClient();
-      const keys = await redis.keys(pattern);
-
+      const keys = await this.redis.keys(pattern);
       if (keys.length > 0) {
-        await redis.del(...keys);
+        await this.redis.del(...keys);
         logger.info(`Cache invalidated for pattern: ${pattern}`);
       }
     } catch (error) {
-      logger.error(`Cache pattern invalidation error for ${pattern}`, error);
+      logger.error(`Cache pattern invalidation error for ${pattern}:`, error);
     }
   }
 }

@@ -18,44 +18,40 @@ const productBaseSchema = z.object({
   stockQuantity: z.number().int().min(0),
   isFeatured: z.boolean().default(false),
   isBestseller: z.boolean().default(false),
-  image: z.string().url(),
+  image: z.string().min(1),
   categoryId: idSchema,
-  topNotes: z.string(),
-  middleNotes: z.string(),
-  baseNotes: z.string(),
 });
 
 // Request schemas
 export const createProductRequest = z.object({
-  body: productBaseSchema.omit({ slug: true }), // slug will be generated
+  body: productBaseSchema.omit({ slug: true }),
 });
 
 export const updateProductRequest = z.object({
   params: z.object({
-    id: idSchema,
+    id: z.coerce.number().int().positive(),
   }),
   body: productBaseSchema.partial(),
 });
 
 export const getProductRequest = z.object({
   params: z.object({
-    id: idSchema,
+    slug: slugSchema,
   }),
 });
 
 export const productFiltersRequest = z.object({
   query: z
     .object({
-      page: z.number().int().min(1).optional().default(1),
-      limit: z.number().int().min(1).max(100).optional().default(10),
+      page: z.coerce.number().int().min(1).optional().default(1),
+      limit: z.coerce.number().int().min(1).max(100).optional().default(10),
       category: z.string().optional(),
       brand: z.string().optional(),
-      minPrice: priceSchema.optional(),
-      maxPrice: priceSchema.optional(),
-      featured: z.boolean().optional(),
-      bestseller: z.boolean().optional(),
+      minPrice: z.coerce.number().optional(),
+      maxPrice: z.coerce.number().optional(),
+      featured: z.coerce.boolean().optional(),
+      bestseller: z.coerce.boolean().optional(),
       sort: z.enum(['price_asc', 'price_desc', 'rating_desc', 'newest']).optional(),
-      notes: z.array(z.string()).optional(),
     })
     .optional(),
 });

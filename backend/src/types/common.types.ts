@@ -5,12 +5,25 @@ export interface PaginationParams {
   order?: 'asc' | 'desc';
 }
 
-export interface ApiResponse<T> {
+export interface BaseApiResponse<T> {
   status: 'success' | 'error';
-  data?: T;
   message?: string;
   code?: string;
 }
+
+export interface SuccessResponse<T> extends BaseApiResponse<T> {
+  status: 'success';
+  data: T;
+}
+
+export interface ErrorResponse extends BaseApiResponse<never> {
+  status: 'error';
+  message: string;
+  code: string;
+  stack?: string;
+}
+
+export type ApiResponse<T> = SuccessResponse<T> | ErrorResponse;
 
 export interface PaginatedResponse<T> {
   items: T[];
@@ -18,11 +31,4 @@ export interface PaginatedResponse<T> {
   page: number;
   pageSize: number;
   totalPages: number;
-}
-
-export interface ErrorResponse {
-  status: 'error';
-  message: string;
-  code: string;
-  stack?: string;
 }

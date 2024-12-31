@@ -1,6 +1,6 @@
-import { Category, Review } from '@prisma/client';
+import { Category } from '@prisma/client';
 
-export interface Product {
+export interface ProductResponse {
   id: number;
   name: string;
   slug: string;
@@ -13,30 +13,30 @@ export interface Product {
   isFeatured: boolean;
   isBestseller: boolean;
   image: string;
-  topNotes: string;
-  middleNotes: string;
-  baseNotes: string;
-  category?: Category;
-  reviews?: Array<{ rating: number }>;
-  averageRating?: number | null;
+  category?: {
+    id: number;
+    name: string;
+    slug: string;
+  };
   createdAt: Date;
   updatedAt: Date;
 }
 
-export interface ProductFilters {
-  category?: string;
-  brand?: string;
-  minPrice?: number;
-  maxPrice?: number;
-  featured?: boolean;
-  bestseller?: boolean;
-  sort?: 'price_asc' | 'price_desc' | 'rating_desc' | 'newest';
-  notes?: string[];
-}
-
-export interface SearchResult {
-  products: Product[];
+export interface ProductListResponse {
+  items: ProductResponse[];
   total: number;
   page: number;
   pageSize: number;
+}
+
+export interface ProductFilters {
+  page?: number;
+  limit?: number;
+  category?: string;
+  brand?: string;
+  minPrice?: string;
+  maxPrice?: string;
+  featured?: string;
+  bestseller?: string;
+  sort?: 'price_asc' | 'price_desc' | 'newest';
 }

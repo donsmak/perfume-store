@@ -1,12 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { prisma } from '../lib/prisma';
 import { NotFoundError } from '../utils/errors';
-import {
-  createCategoryRequest,
-  updateCategoryRequest,
-} from '../schemas/validation/category.schema';
-import { generateSlug } from '../utils/helpers';
-import { validate } from '../middleware/validate.middleware';
+import { formatCategory, formatCategoryList, formatResponse } from '../utils';
 
 export class CategoryController {
   /**
@@ -21,16 +16,8 @@ export class CategoryController {
           },
         },
       });
-
-      res.json({
-        status: 'success',
-        data: {
-          items: categories,
-          total: categories.length,
-          page: 1,
-          pageSize: categories.length,
-        },
-      });
+      const formattedList = formatCategoryList(categories);
+      res.json(formatResponse(formattedList));
     } catch (error) {
       next(error);
     }
@@ -56,58 +43,9 @@ export class CategoryController {
         throw new NotFoundError('Category not found');
       }
 
-      res.json({
-        status: 'success',
-        data: category,
-      });
-    } catch (error) {
-      next(error);
-    }
-  };
+      const formattedCategory = formatCategory(category);
 
-  /**
-   * Create new category
-   */
-  public create = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const validatedData = createCategoryRequest.parse({ body: req.body });
-      const slug = generateSlug(validatedData.body.name);
-
-      const category = await prisma.category.create({
-        data: {
-          ...validatedData.body,
-          slug,
-        },
-      });
-
-      res.status(201).json({
-        status: 'success',
-        data: category,
-      });
-    } catch (error) {
-      next(error);
-    }
-  };
-
-  /**
-   * Update category
-   */
-  public update = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const validatedData = updateCategoryRequest.parse({
-        params: req.params,
-        body: req.body,
-      });
-
-      const category = await prisma.category.update({
-        where: { id: validatedData.params.id },
-        data: validatedData.body,
-      });
-
-      res.json({
-        status: 'success',
-        data: category,
-      });
+      res.json(formatResponse(formattedCategory));
     } catch (error) {
       next(error);
     }
