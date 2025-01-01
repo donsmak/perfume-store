@@ -4,7 +4,13 @@ import { ProductResponse, ProductListResponse } from '../types/product.types';
 import { SuccessResponse } from '../types/common.types';
 
 export const formatCategory = (
-  category: Category & { _count?: { products: number } }
+  category: Category & {
+    _count?: { products: number };
+    totalProducts?: number;
+    currentPage?: number;
+    pageSize?: number;
+    products?: any[];
+  }
 ): CategoryResponse | null => {
   if (!category) return null;
 
@@ -14,6 +20,18 @@ export const formatCategory = (
     slug: String(category.slug),
     description: String(category.description),
     productsCount: Number(category._count?.products || 0),
+    ...(category.totalProducts && { totalProducts: Number(category.totalProducts) }),
+    ...(category.currentPage && { currentPage: Number(category.currentPage) }),
+    ...(category.pageSize && { pageSize: Number(category.pageSize) }),
+    ...(category.products && {
+      products: category.products.map((p) => ({
+        id: Number(p.id),
+        name: String(p.name),
+        slug: String(p.slug),
+        price: Number(p.price),
+        image: String(p.image),
+      })),
+    }),
     createdAt: new Date(category.createdAt),
     updatedAt: new Date(category.updatedAt),
   };

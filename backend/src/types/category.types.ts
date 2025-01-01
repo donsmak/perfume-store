@@ -6,6 +6,16 @@ export interface CategoryResponse {
   slug: string;
   description: string;
   productsCount: number;
+  totalProducts?: number;
+  currentPage?: number;
+  pageSize?: number;
+  products?: {
+    id: number;
+    name: string;
+    slug: string;
+    price: number;
+    image: string;
+  }[];
   createdAt: Date;
   updatedAt: Date;
 }

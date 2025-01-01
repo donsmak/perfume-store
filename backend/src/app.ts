@@ -13,6 +13,7 @@ import config from './config';
 import categoryRoutes from './routes/category.routes';
 import authRoutes from './routes/auth.routes';
 import productRoutes from './routes/product.routes';
+import adminRoutes from './routes/admin.routes';
 import { cacheService } from './services/cache.service';
 const app = express();
 
@@ -37,6 +38,7 @@ async function startServer() {
     app.use('/api/v1/categories', categoryRoutes);
     app.use('/api/v1/auth', authRoutes);
     app.use('/api/v1/products', productRoutes);
+    app.use('/api/v1/admin', adminRoutes);
 
     // Error handling
     process.on('unhandledRejection', (err: Error) => {

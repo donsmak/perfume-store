@@ -19,6 +19,8 @@ model User {
   verificationToken    String?
   resetPasswordToken   String?
   resetPasswordExpires DateTime?
+  refreshToken         String?
+  refreshTokenExpires  DateTime?
   addresses            Address[]
   orders              Order[]
   cart                Cart?
