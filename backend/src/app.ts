@@ -2,7 +2,6 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import express from 'express';
-import { initRedis } from './config/redis.config';
 import cors from 'cors';
 import helmet from 'helmet';
 import { errorHandler } from './middleware/error.middleware';
@@ -14,7 +13,12 @@ import categoryRoutes from './routes/category.routes';
 import authRoutes from './routes/auth.routes';
 import productRoutes from './routes/product.routes';
 import adminRoutes from './routes/admin.routes';
+import reviewRoutes from './routes/review.routes';
+import addressRoutes from './routes/address.routes';
+import cartRoutes from './routes/cart.routes';
 import { cacheService } from './services/cache.service';
+import { redis } from './lib/redis';
+import orderRoutes from './routes/order.routes';
 const app = express();
 
 async function startServer() {
@@ -23,7 +27,9 @@ async function startServer() {
     await cacheService.initialize();
 
     // Initialize Redis before starting the server
-    await initRedis();
+    await redis.ping();
+    logger.info('Connected to Redis');
+
     // Middleware
     app.use(express.json());
     app.use(express.urlencoded({ extended: true }));
@@ -39,6 +45,10 @@ async function startServer() {
     app.use('/api/v1/auth', authRoutes);
     app.use('/api/v1/products', productRoutes);
     app.use('/api/v1/admin', adminRoutes);
+    app.use('/api/v1/reviews', reviewRoutes);
+    app.use('/api/v1/addresses', addressRoutes);
+    app.use('/api/v1/cart', cartRoutes);
+    app.use('/api/v1/orders', orderRoutes);
 
     // Error handling
     process.on('unhandledRejection', (err: Error) => {

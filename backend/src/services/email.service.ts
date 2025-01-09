@@ -1,5 +1,5 @@
 import nodemailer from 'nodemailer';
-import { OrderStatus } from '../types/order';
+import { OrderStatus } from '../types/order.types';
 
 export class EmailService {
   private transporter;

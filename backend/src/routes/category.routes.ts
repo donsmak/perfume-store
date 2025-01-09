@@ -1,22 +1,29 @@
 import { Router } from 'express';
 import { CategoryController } from '../controllers/category.controller';
-import { validate } from '../middleware/';
-import { cache } from '../middleware/cache.middleware';
-import { CACHE_TTL, CACHE_KEYS } from '../constants';
-import { createCategoryRequest, updateCategoryRequest } from '../schemas/validation/category.schema';
-import { isAuth } from '../middleware';
-import { isAdmin } from '../middleware/';
+import { isAuth } from '../middleware/auth.middleware';
+import { validate } from '../middleware/validate.middleware';
+import { createCategorySchema, updateCategorySchema } from '../schemas/category.schema';
+import { authorize } from '../middleware/authz.middleware';
 
 const router = Router();
 const categoryController = new CategoryController();
 
-// Public routes
-router.get('/', cache(CACHE_TTL.LONG), categoryController.getAll);
-router.get('/:slug', cache(CACHE_TTL.LONG), categoryController.getBySlug);
-
-// Admin routes
-router.post('/', isAuth, isAdmin, validate(createCategoryRequest), categoryController.create);
-router.patch('/:id', isAuth, isAdmin, validate(updateCategoryRequest), categoryController.update);
-router.delete('/:id', isAuth, isAdmin, categoryController.delete);
+router.get('/', categoryController.getAll);
+router.get('/:slug', categoryController.getBySlug);
+router.post(
+  '/',
+  isAuth,
+  authorize(['admin']),
+  validate(createCategorySchema),
+  categoryController.create
+);
+router.put(
+  '/:id',
+  isAuth,
+  authorize(['admin']),
+  validate(updateCategorySchema),
+  categoryController.update
+);
+router.delete('/:id', isAuth, authorize(['admin']), categoryController.delete);
 
 export default router;

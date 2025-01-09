@@ -1,7 +1,6 @@
 import { z } from 'zod';
 import { idSchema, priceSchema, successResponseSchema } from './common.schema';
 
-// Base schemas
 const cartItemBaseSchema = z.object({
   productId: idSchema,
   quantity: z.number().int().positive(),
@@ -9,23 +8,28 @@ const cartItemBaseSchema = z.object({
 });
 
 // Request schemas
-export const addToCartRequest = z.object({
+export const addItemSchema = z.object({
   body: z.object({
-    productId: idSchema,
-    quantity: z.number().int().positive('Quantity must be positive'),
+    productId: z.number().int().positive(),
+    quantity: z.number().int().positive(),
   }),
 });
 
-export const updateCartItemRequest = z.object({
+export const updateItemSchema = z.object({
+  body: z.object({
+    quantity: z.number().int().positive(),
+  }),
   params: z.object({
-    itemId: idSchema,
-  }),
-  body: z.object({
-    quantity: z.number().int().positive('Quantity must be positive'),
+    id: z.string(),
   }),
 });
 
-// Response schemas
+export const removeItemSchema = z.object({
+  params: z.object({
+    id: z.string(),
+  }),
+});
+
 const cartItemResponseSchema = cartItemBaseSchema.extend({
   id: idSchema,
   cartId: idSchema,

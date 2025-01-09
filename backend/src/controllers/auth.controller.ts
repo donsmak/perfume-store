@@ -11,6 +11,7 @@ import { randomBytes } from 'crypto';
 import { addHours, addDays } from 'date-fns';
 import { sendPasswordResetEmail, sendVerificationEmail } from '../utils/email';
 import { formatResponse } from '../utils/formatters';
+import { logger } from '../utils/logger';
 export class AuthController {
   /**
    * Register a new user
@@ -52,26 +53,18 @@ export class AuthController {
         },
       });
 
-      await sendVerificationEmail(email, verificationToken);
-
-      const token = generateTokenPair({ userId: user.id, role: user.role });
-
-      await prisma.user.update({
-        where: { id: user.id },
-        data: {
-          refreshToken: token.refreshToken,
-          refreshTokenExpires: token.refreshTokenExpires,
-        },
-      });
+      try {
+        await sendVerificationEmail(email, verificationToken);
+      } catch (error) {
+        logger.error(`Error sending verification email: ${error}`);
+      }
 
       const { verificationToken: _, ...userWithoutToken } = user;
 
       res.status(201).json(
         formatResponse({
-          accessToken: token.accessToken,
-          refreshToken: token.refreshToken,
           user: userWithoutToken,
-          message: 'User registered successfully. Please check your email for verification.',
+          message: 'User registered successfully. Please check your email to verify your account.',
         })
       );
     } catch (error) {
@@ -144,7 +137,7 @@ export class AuthController {
       });
 
       if (!user) {
-        throw new ValidationError('Invalid or expires verification token');
+        throw new ValidationError('Invalid or expired verification token');
       }
 
       await prisma.user.update({
@@ -155,8 +148,20 @@ export class AuthController {
         },
       });
 
+      const tokens = generateTokenPair({ userId: user.id, role: user.role });
+
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          refreshToken: tokens.refreshToken,
+          refreshTokenExpires: tokens.refreshTokenExpires,
+        },
+      });
+
       res.json(
         formatResponse({
+          accessToken: tokens.accessToken,
+          refreshToken: tokens.refreshToken,
           message: 'Email verified successfully',
           redirectUrl: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/login`,
         })

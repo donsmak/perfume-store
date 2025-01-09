@@ -1,23 +1,20 @@
-import { Category } from '@prisma/client';
+import { Product } from '@prisma/client';
 
 export interface ProductResponse {
   id: number;
   name: string;
   slug: string;
-  brand: string;
-  categoryId: number;
   description: string;
   price: number;
-  volume: string;
   stockQuantity: number;
+  images: string[];
   isFeatured: boolean;
-  isBestseller: boolean;
-  image: string;
-  category?: {
+  category: {
     id: number;
     name: string;
     slug: string;
   };
+  averageRating: number;
   createdAt: Date;
   updatedAt: Date;
 }

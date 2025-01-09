@@ -1,82 +1,55 @@
-import { Redis } from 'ioredis';
-import { initRedis } from '../config/redis.config';
+import { redis } from '../lib/redis';
 import { logger } from '../utils/logger';
 
 class CacheService {
-  private redis: Redis;
-
-  async initialize() {
-    try {
-      this.redis = await initRedis();
-    } catch (error) {
-      logger.error('Failed to initialize cache service:', error);
-      throw error;
-    }
-  }
-
   async get(key: string): Promise<string | null> {
     try {
-      const value = await this.redis.get(key);
-      if (value) {
-        logger.info(`Cache hit for key: ${key}`);
-      } else {
-        logger.info(`Cache miss for key: ${key}`);
-      }
-      return value;
+      const data = await redis.get(key);
+      logger.info(`Cache ${data ? 'hit' : 'miss'} for key: ${key}`);
+      return data;
     } catch (error) {
-      logger.error(`Cache get error for key ${key}:`, error);
+      logger.error(`Error getting cache for key: ${key}`, error);
       return null;
     }
   }
 
-  async set(key: string, value: any, ttl: number): Promise<void> {
+  async set(key: string, value: string, ttl: number = 3600): Promise<void> {
     try {
-      const stringValue = typeof value === 'string' ? value : JSON.stringify(value);
-      await this.redis.setex(key, ttl, stringValue);
+      await redis.set(key, value, 'EX', ttl);
       logger.info(`Cache set for key: ${key}`);
     } catch (error) {
-      logger.error(`Cache set error for key ${key}:`, error);
+      logger.error(`Error setting cache for key: ${key}`, error);
     }
   }
 
-  async getOrSet<T>(key: string, callback: () => Promise<T>, ttl = 3600): Promise<T> {
+  async del(key: string): Promise<void> {
     try {
-      const cached = await this.redis.get(key);
-      if (cached) {
-        logger.info(`Cache hit for key: ${key}`);
-        return JSON.parse(cached);
+      await redis.del(key);
+      logger.info(`Cache deleted for key: ${key}`);
+    } catch (error) {
+      logger.error(`Error deleting cache for key: ${key}`, error);
+    }
+  }
+
+  async delByPattern(pattern: string): Promise<void> {
+    try {
+      const keys = await redis.keys(pattern);
+      if (keys.length) {
+        await redis.del(...keys);
       }
-
-      logger.info(`Cache miss for key: ${key}`);
-
-      const fresh = await callback();
-      await this.set(key, fresh, ttl);
-
-      return fresh;
+      logger.info(`Cache deleted for pattern: ${pattern}`);
     } catch (error) {
-      logger.error(`Cache error for key ${key}:`, error);
-      return callback();
+      logger.error(`Error deleting cache for pattern: ${pattern}`, error);
     }
   }
 
-  async invalidate(key: string): Promise<void> {
+  async initialize(): Promise<void> {
     try {
-      await this.redis.del(key);
-      logger.info(`Cache invalidated for key: ${key}`);
+      await redis.ping();
+      logger.info('Cache service initialized');
     } catch (error) {
-      logger.error(`Cache invalidation error for key ${key}:`, error);
-    }
-  }
-
-  async invalidatePattern(pattern: string): Promise<void> {
-    try {
-      const keys = await this.redis.keys(pattern);
-      if (keys.length > 0) {
-        await this.redis.del(...keys);
-        logger.info(`Cache invalidated for pattern: ${pattern}`);
-      }
-    } catch (error) {
-      logger.error(`Cache pattern invalidation error for ${pattern}:`, error);
+      logger.error('Error initializing cache service:', error);
+      process.exit(1);
     }
   }
 }

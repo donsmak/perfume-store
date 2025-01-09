@@ -9,13 +9,14 @@ import {
   refreshTokenSchema,
   updateProfileSchema,
   changePasswordSchema,
-} from '../schemas/validation/auth.schema';
+} from '../schemas/auth.schema';
 import { isAuth } from '../middleware';
+import { loginRateLimiter } from '../middleware/rateLimit.middleware';
 const router = Router();
 const authController = new AuthController();
 
 router.post('/register', validate(registerRequest), authController.register);
-router.post('/login', validate(loginRequest), authController.login);
+router.post('/login', loginRateLimiter, authController.login);
 
 router.get('/verify-email', authController.verifyEmail);
 router.post('/reset-password', validate(resetPasswordSchema), authController.resetPassword);

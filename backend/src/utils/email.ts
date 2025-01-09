@@ -1,68 +1,62 @@
-// import nodemailer from 'nodemailer';
-import config from '../config';
+import nodemailer from 'nodemailer';
 import { logger } from './logger';
 
-// const transporter = nodemailer.createTransport({
-//   host: config.email.host,
-//   port: config.email.port,
-//   secure: config.email.secure,
-//   auth: {
-//     user: config.email.user,
-//     pass: config.email.password,
-//   },
-// });
+// Configure email transporter (replace with your actual settings)
+const transporter = nodemailer.createTransport({
+  host: process.env.EMAIL_HOST,
+  port: Number(process.env.EMAIL_PORT),
+  secure: process.env.EMAIL_SECURE === 'true', // true for 465, false for other ports
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASSWORD,
+  },
+});
 
-// export const sendVerificationEmail = async (email: string, token: string) => {
-//   const verificationUrl = `${config.app.url}/verify-email?token=${token}`;
-
-//   await transporter.sendMail({
-//     from: config.email.user,
-//     to: email,
-//     subject: 'Verify your email address',
-//     html: `
-//       <h1>Email Verification</h1>
-//       <p>Please click the link below to verify your email address:</p>
-//       <a href="${verificationUrl}">${verificationUrl}</a>
-//       <p>This link will expire in 24 hours.</p>
-//     `,
-//   });
-// };
-
-// export const sendPasswordResetEmail = async (email: string, token: string) => {
-//   const resetUrl = `${config.app.url}/reset-password?token=${token}`;
-
-//   await transporter.sendMail({
-//     from: config.email.user,
-//     to: email,
-//     subject: 'Reset your password',
-//     html: `
-//       <h1>Password Reset</h1>
-//       <p>Please click the link below to reset your password:</p>
-//       <a href="${resetUrl}">${resetUrl}</a>
-//       <p>This link will expire in 24 hours.</p>
-//     `,
-//   });
-// };
-
-// test without email setup
-export const sendVerificationEmail = async (email: string, token: string) => {
+export const sendVerificationEmail = async (email: string, token: string): Promise<void> => {
   const verificationUrl = `${
-    process.env.APP_URL || 'http://localhost:5000'
-  }/verify-email?token=${token}`;
+    process.env.BACKEND_URL || 'http://localhost:5000'
+  }/api/v1/auth/verify-email?token=${token}`;
 
-  logger.info('Verification URL:', {
-    email,
-    url: verificationUrl,
-  });
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: 'Verify Your Email',
+    html: `
+      <p>Please click the link below to verify your email address:</p>
+      <a href="${verificationUrl}">${verificationUrl}</a>
+    `,
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    logger.info(`Verification email sent to ${email}`);
+  } catch (error) {
+    logger.error(`Error sending verification email: ${error}`);
+    throw error;
+  }
 };
 
-export const sendPasswordResetEmail = async (email: string, token: string) => {
+export const sendPasswordResetEmail = async (email: string, token: string): Promise<void> => {
   const resetUrl = `${
-    process.env.APP_URL || 'http://localhost:5000'
+    process.env.FRONTEND_URL || 'http://localhost:3000'
   }/reset-password?token=${token}`;
 
-  logger.info('Password Reset URL:', {
-    email,
-    url: resetUrl,
-  });
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: 'Password Reset Request',
+    html: `
+      <p>You requested a password reset. Please click the link below to reset your password:</p>
+      <a href="${resetUrl}">${resetUrl}</a>
+      <p>If you did not request a password reset, please ignore this email.</p>
+    `,
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    logger.info(`Password reset email sent to ${email}`);
+  } catch (error) {
+    logger.error(`Error sending password reset email: ${error}`);
+    throw error;
+  }
 };

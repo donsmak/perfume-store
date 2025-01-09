@@ -1,102 +1,59 @@
-import { Product, Category } from '@prisma/client';
-import { CategoryResponse, CategoryListResponse } from '../types/category.types';
-import { ProductResponse, ProductListResponse } from '../types/product.types';
-import { SuccessResponse } from '../types/common.types';
-
-export const formatCategory = (
-  category: Category & {
-    _count?: { products: number };
-    totalProducts?: number;
-    currentPage?: number;
-    pageSize?: number;
-    products?: any[];
-  }
-): CategoryResponse | null => {
-  if (!category) return null;
-
-  return {
-    id: Number(category.id),
-    name: String(category.name),
-    slug: String(category.slug),
-    description: String(category.description),
-    productsCount: Number(category._count?.products || 0),
-    ...(category.totalProducts && { totalProducts: Number(category.totalProducts) }),
-    ...(category.currentPage && { currentPage: Number(category.currentPage) }),
-    ...(category.pageSize && { pageSize: Number(category.pageSize) }),
-    ...(category.products && {
-      products: category.products.map((p) => ({
-        id: Number(p.id),
-        name: String(p.name),
-        slug: String(p.slug),
-        price: Number(p.price),
-        image: String(p.image),
-      })),
-    }),
-    createdAt: new Date(category.createdAt),
-    updatedAt: new Date(category.updatedAt),
-  };
-};
+import { Category } from '@prisma/client';
+import { CategoryResponse, CategoryWithProductsAndCount } from '../types/category.types';
 
 export const formatCategoryList = (
-  categories: (Category & { _count?: { products: number } })[]
-): CategoryListResponse => ({
-  items: categories
-    .map((cat) => formatCategory(cat))
-    .filter((cat): cat is CategoryResponse => cat !== null),
-  total: categories.length,
-  page: 1,
-  pageSize: categories.length,
-});
+  categories: CategoryWithProductsAndCount[]
+): CategoryResponse[] => {
+  return categories.map((category) => ({
+    id: category.id,
+    name: category.name,
+    slug: category.slug,
+    description: category.description,
+    image: category.image,
+    productCount: category._count.products,
+    ...(category.products && {
+      products: category.products.map((product) => ({
+        id: product.id,
+        name: product.name,
+        slug: product.slug,
+        price: product.price,
+        image: product.images && product.images.length > 0 ? product.images[0].url : null,
+      })),
+    }),
+  }));
+};
 
-export const formatProduct = (
-  product: Product & {
-    category?: { id: number; name: string; slug: string };
+export const formatCategory = (
+  category: CategoryWithProductsAndCount & {
+    totalProducts: number;
+    currentPage: number;
+    pageSize: number;
   }
-): ProductResponse | null => {
-  if (!product) return null;
-
+): CategoryResponse => {
   return {
-    id: Number(product.id),
-    name: String(product.name),
-    slug: String(product.slug),
-    brand: String(product.brand),
-    description: String(product.description),
-    price: Number(product.price),
-    volume: String(product.volume),
-    stockQuantity: Number(product.stockQuantity),
-    isFeatured: Boolean(product.isFeatured),
-    isBestseller: Boolean(product.isBestseller),
-    image: String(product.image),
-    categoryId: Number(product.categoryId),
-    category: product.category
-      ? {
-          id: Number(product.category.id),
-          name: String(product.category.name),
-          slug: String(product.category.slug),
-        }
-      : undefined,
-    createdAt: new Date(product.createdAt),
-    updatedAt: new Date(product.updatedAt),
+    id: category.id,
+    name: category.name,
+    slug: category.slug,
+    description: category.description,
+    image: category.image,
+    totalProducts: category.totalProducts,
+    currentPage: category.currentPage,
+    pageSize: category.pageSize,
+    products:
+      category.products?.map((product) => ({
+        id: product.id,
+        name: product.name,
+        slug: product.slug,
+        price: product.price,
+        image: product.images && product.images.length > 0 ? product.images[0].url : null,
+      })) || [],
   };
 };
 
-export const formatProductList = (
-  products: (Product & {
-    category?: { id: number; name: string; slug: string };
-  })[],
-  page = 1,
-  pageSize = 10,
-  total?: number
-): ProductListResponse => ({
-  items: products
-    .map((product) => formatProduct(product))
-    .filter((product): product is ProductResponse => product !== null),
-  total: total ?? products.length,
-  page: Number(page),
-  pageSize: Number(pageSize),
-});
-
-export const formatResponse = <T>(data: T): SuccessResponse<T> => ({
-  status: 'success',
-  data,
-});
+export const formatResponse = <T>(data: T, message: string = 'Success', errors: any = null) => {
+  return {
+    data,
+    message,
+    errors,
+  };
+};

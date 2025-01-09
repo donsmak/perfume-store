@@ -1,18 +1,23 @@
 import { Request, Response, NextFunction } from 'express';
 import { prisma } from '../lib/prisma';
 import { NotFoundError } from '../utils/errors';
-import { formatCategory, formatCategoryList, formatResponse } from '../utils';
-import { clearCache } from '../middleware/cache.middleware';
+import { formatCategory, formatCategoryList, formatResponse } from '../utils/formatters';
+import { cacheService } from '../services/cache.service';
 import { CACHE_KEYS } from '../constants';
+import { CategoryListResponse, CategoryResponse } from '../types/category.types';
 
 export class CategoryController {
-  /**
-   * Get all categories
-   * With optional product count and filters
-   */
   public getAll = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const { withProducts, featured } = req.query;
+      const { withProducts } = req.query;
+
+      const cacheKey = `${CACHE_KEYS.CATEGORIES}:${withProducts}`;
+      const cachedCategories = await cacheService.get(cacheKey);
+
+      if (cachedCategories) {
+        res.json(JSON.parse(cachedCategories));
+        return;
+      }
 
       const categories = await prisma.category.findMany({
         include: {
@@ -22,44 +27,33 @@ export class CategoryController {
           ...(withProducts === 'true' && {
             products: {
               take: 4,
-              where: {
-                ...(featured === 'true' && { isFeatured: true }),
-              },
-              select: {
-                id: true,
-                name: true,
-                slug: true,
-                price: true,
-                image: true,
-              },
             },
           }),
         },
       });
 
       const formattedList = formatCategoryList(categories);
-      res.json(formatResponse(formattedList));
+      const response: CategoryListResponse = {
+        items: formattedList,
+        total: categories.length,
+        page: 1,
+        pageSize: categories.length,
+      };
+
+      await cacheService.set(cacheKey, JSON.stringify(formatResponse(response)));
+      res.json(formatResponse(response));
     } catch (error) {
       next(error);
     }
   };
 
-  /**
-   * Get category by slug
-   */
   public getBySlug = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { slug } = req.params;
-      const { page = 1, limit = 10, sort } = req.query;
+      const { page = 1, limit = 10 } = req.query;
 
       const pageNumber = Number(page);
       const pageSize = Number(limit);
-
-      const orderBy: any = {
-        ...(sort === 'price_asc' && { price: 'asc' }),
-        ...(sort === 'price_desc' && { price: 'desc' }),
-        ...(sort === 'newest' && { createdAt: 'desc' }),
-      };
 
       const [category, totalProducts] = await Promise.all([
         prisma.category.findUnique({
@@ -71,7 +65,6 @@ export class CategoryController {
             products: {
               skip: (pageNumber - 1) * pageSize,
               take: pageSize,
-              orderBy,
             },
           },
         }),
@@ -105,7 +98,7 @@ export class CategoryController {
         data: req.body,
       });
 
-      await clearCache(`${CACHE_KEYS.CATEGORIES}*`);
+      await cacheService.delByPattern(`${CACHE_KEYS.CATEGORIES}*`);
       res.status(201).json(formatResponse(category));
     } catch (error) {
       next(error);
@@ -120,7 +113,7 @@ export class CategoryController {
         data: req.body,
       });
 
-      await clearCache(`${CACHE_KEYS.CATEGORIES}*`);
+      await cacheService.delByPattern(`${CACHE_KEYS.CATEGORIES}*`);
       res.json(formatResponse(category));
     } catch (error) {
       next(error);
@@ -134,8 +127,7 @@ export class CategoryController {
         where: { id: Number(id) },
       });
 
-      await clearCache(`${CACHE_KEYS.CATEGORIES}*`);
-
+      await cacheService.delByPattern(`${CACHE_KEYS.CATEGORIES}*`);
       res.json(formatResponse({ message: 'Category successfully deleted' }));
     } catch (error) {
       next(error);

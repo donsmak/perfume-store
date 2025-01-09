@@ -37,3 +37,9 @@ export interface ResetPasswordRequest {
   token: string;
   password: string;
 }
+
+export interface TokenPair {
+  accessToken: string;
+  refreshToken: string;
+  refreshTokenExpires: Date;
+}

@@ -1,13 +1,14 @@
 import { Router } from 'express';
 import { AdminController } from '../controllers/admin.controller';
-import { isAuth, isAdmin } from '../middleware/';
-import { validate } from '../middleware/';
-import { updateUserRoleSChema } from '../schemas/validation/admin.schema';
+import { isAuth } from '../middleware/auth.middleware';
+import { authorize } from '../middleware/authz.middleware';
+import { validate } from '../middleware/validate.middleware';
+import { updateUserRoleSChema } from '../schemas/admin.schema';
 
 const router = Router();
 const adminController = new AdminController();
 
-router.use(isAuth, isAdmin);
+router.use(isAuth, authorize(['admin']));
 
 router.get('/users', adminController.getAllUsers);
 router.patch('/users/:id/role', validate(updateUserRoleSChema), adminController.updateUserRole);
